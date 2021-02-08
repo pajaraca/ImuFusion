@@ -29,6 +29,8 @@ N = size(imu_data, 2);
 
 %% Since we have got all the data, we can run the zero velocity detection
 %%  for the whole dataset.
+%% Encontra as velocidades zero comparando as médias da aceleração (janela de 5 dados) com um limite gamma de 0.6
+%% Teoricamente pode ser combinado com detecção pelo módulo da velocidade angular também, módulo da aceleração, vetor gravidade, etc.
 iszv = zeros(1, N);
 T = zeros(1, N-W+1);
 for k = 1:N-W+1
@@ -59,19 +61,23 @@ init_psi =  0;
 init_theta = -asin(init_a(1));
 init_phi = atan2(init_a(2), init_a(3));
 
+% estima o quaternion inicial (no referêncial do corpo)
 init_quat = angle2quat(init_psi, init_theta, init_phi);
 
 % Estimate sensor bias.
+% esse parâmetro foi estimado mas não é utilizado em nenhuma outra parte
 Rsw = quat2dcm(init_quat);
-as  = Rsw * [0;0;g];
+as  = Rsw * [0;0;g]; % rotaciona a gravidade para o referêncial do corpo
 bias_a = mean(imu_data(1:3,1:500),2) - as;
 bias_w = mean(imu_data(4:6,1:500),2);
 
 % set the initial state vector
+% o vetor de estados é composto por: posição(1-3), velocidade(4-6) e quaternion (7-10)
 x = zeros(10,1);
 x(7:10,1) = init_quat';
 
 % set the initial covariance
+% é uma matriz diagonal 10x10 onde os 6 primeiros elementos são 0.0001*10^(-6) e os 4 últimos 1*10^(-6)
 P = diag([1e-10*ones(1,6), 1e-6*ones(1,4)]);
 
 %
@@ -79,7 +85,7 @@ x_r = zeros(10,N);
 x_r(:,1) = x;
 
 % measurement matrix
-H = [zeros(3), eye(3), zeros(3,4)];
+H = [zeros(3), eye(3), zeros(3,4)]; % matriz 3x10
 R =  sigma_vel^2 * eye(3);
 
 %%
