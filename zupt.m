@@ -62,6 +62,7 @@ init_theta = -asin(init_a(1));
 init_phi = atan2(init_a(2), init_a(3));
 
 % estima o quaternion inicial (no referêncial do corpo)
+% o escalar está na primeira coluna
 init_quat = angle2quat(init_psi, init_theta, init_phi);
 
 % Estimate sensor bias.
@@ -76,16 +77,18 @@ bias_w = mean(imu_data(4:6,1:500),2);
 x = zeros(10,1);
 x(7:10,1) = init_quat';
 
-% set the initial covariance
+% set the initial Error covariance Matrix
+% in some cases just a zero matrix is possible, when P is propagated or in Kalman gain
 % é uma matriz diagonal 10x10 onde os 6 primeiros elementos são 0.0001*10^(-6) e os 4 últimos 1*10^(-6)
 P = diag([1e-10*ones(1,6), 1e-6*ones(1,4)]);
 
-%
+% essa variável vai guardar todos os estados
 x_r = zeros(10,N);
 x_r(:,1) = x;
 
-% measurement matrix
+% zupt measurement matrix
 H = [zeros(3), eye(3), zeros(3,4)]; % matriz 3x10
+% zupt measurement noise covariance matrix
 R =  sigma_vel^2 * eye(3);
 
 %%
@@ -99,6 +102,7 @@ for k = 2:N
     a = imu_data(1:3, k-1); % - bias_a;
     
     % continuous state transition matrix
+    % esse fator é utilizado na diferenciação do quatérnion e representa a taxa de giro entre os referenciais
     Ow = [0     -w(1)   -w(2)    -w(3);...
           w(1)   0       w(3)    -w(2);...
           w(2)  -w(3)    0        w(1);...
@@ -110,6 +114,7 @@ for k = 2:N
     Fc(4:10,7:10)= [Vq; 0.5*Ow];
     
     % continuous process covariance
+    % é a solução de Ow
     Gq = 0.5* [-quat(2)  -quat(3)   -quat(4); ...
                 quat(1)  -quat(4)    quat(3); ...
                 quat(4)   quat(1)   -quat(2); ...
@@ -118,7 +123,7 @@ for k = 2:N
     Qc(4:6, 4:6)  =  sigma_acc^2*eye(3);
     Qc(7:10,7:10) =  sigma_gyro^2*(Gq*Gq');
     
-    % discretilization
+    % Process noise covariance discretization
     F = eye(10) + Fc* dt;
     Q = Qc* dt;
     
@@ -126,6 +131,7 @@ for k = 2:N
     R_S_n = quat2dcm(quat');
     acc = R_S_n' * a - [0; 0;  g];
     
+    %% Velocity and position estimation
     x(1:3) = x(1:3) + x(4:6)* dt + 0.5*acc* dt^2;
     x(4:6) = x(4:6) + acc* dt;
     
