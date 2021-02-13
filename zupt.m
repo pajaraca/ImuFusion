@@ -123,8 +123,9 @@ for k = 2:N
     Qc(4:6, 4:6)  =  sigma_acc^2*eye(3);
     Qc(7:10,7:10) =  sigma_gyro^2*(Gq*Gq');
     
-    % Process noise covariance discretization
+    % State Transiction discretization
     F = eye(10) + Fc* dt;
+    % Process noise covariance discretization
     Q = Qc* dt;
     
     %% state propagation
@@ -147,9 +148,11 @@ for k = 2:N
         K = (P*H')/(H*P*H'+R);
         y = -x(4:6);
         
+        %calculate posterior
         x = x + K*y;
+        %normalize quaternion
         x(7:10) = x(7:10)/norm(x(7:10));
-        
+        %calculate posterior covariance
         P = (eye(10)-K*H)*P;
     end
     
