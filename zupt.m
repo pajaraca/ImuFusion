@@ -103,10 +103,12 @@ for k = 2:N
     
     % continuous state transition matrix
     % esse fator é utilizado na integração do quatérnion e representa a taxa de giro entre os referenciais
+    % q' = (1/2)*q⊗w, pode ser reescrita como q' = (1/2)*S(w)*q ou q' = (1/2)*S(q)*w, sendo S(w) = Ow e S(q) = Gq 
     Ow = [0     -w(1)   -w(2)    -w(3);...
           w(1)   0       w(3)    -w(2);...
           w(2)  -w(3)    0        w(1);...
           w(3)   w(2)   -w(1)     0  ];
+    
     Vq = compVq(quat, a);
     
     Fc = zeros(10);
