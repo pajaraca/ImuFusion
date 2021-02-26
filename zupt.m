@@ -101,9 +101,10 @@ for k = 2:N
     quat = x(7:10,1);
     a = imu_data(1:3, k-1); % - bias_a;
     
-    % continuous state transition matrix
-    % esse fator é utilizado na integração do quatérnion e representa a taxa de giro entre os referenciais
+    % quatérnion and gyro dynamics can be expressed as the follow equations, that gonna be usefull to determine some of kalman matrix
     % q' = (1/2)*q⊗w, pode ser reescrita como q' = (1/2)*S(w)*q ou q' = (1/2)*S(q)*w, sendo S(w) = Ow e S(q) = Gq 
+    
+    % continuous state transition matrix
     Ow = [0     -w(1)   -w(2)    -w(3);...
           w(1)   0       w(3)    -w(2);...
           w(2)  -w(3)    0        w(1);...
@@ -116,14 +117,13 @@ for k = 2:N
     Fc(4:10,7:10)= [Vq; 0.5*Ow];
     
     % continuous process covariance
-    % é a solução de Ow
     Gq = 0.5* [-quat(2)  -quat(3)   -quat(4); ...
                 quat(1)  -quat(4)    quat(3); ...
                 quat(4)   quat(1)   -quat(2); ...
                -quat(3)   quat(2)    quat(1)];       
     Qc = zeros(10);
     Qc(4:6, 4:6)  =  sigma_acc^2*eye(3);
-    Qc(7:10,7:10) =  sigma_gyro^2*(Gq*Gq');
+    Qc(7:10,7:10) =  sigma_gyro^2*(Gq*Gq'); %Qc=Gq*Gq'*σg^2
     
     % State Transiction discretization
     F = eye(10) + Fc* dt;
